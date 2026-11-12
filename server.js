@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const dns = require('dns');
+
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -83,6 +86,15 @@ const CardSettlement = mongoose.model('CardSettlement', CardSettlementSchema);
 // ============================================================================
 
 app.get('/', (req, res) => res.send('Fleet Engine API Active'));
+
+// Health check endpoint for Wakey Wakey
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    message: 'Backend is awake!',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Cards API (No Delete Endpoint per requirements)
 app.get('/api/credit-cards', async (req, res) => {
@@ -167,6 +179,24 @@ app.post('/api/fuel-logs', async (req, res) => {
 app.put('/api/fuel-logs/:id', async (req, res) => {
   try { res.json(await FuelLog.findByIdAndUpdate(req.params.id, req.body, { new: true })); } 
   catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/api/fuel-logs/:id', async (req, res) => {
+  try {
+    const deleted = await FuelLog.findByIdAndDelete(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        error: 'Fuel entry not found'
+      });
+    }
+
+    res.json({
+      message: 'Fuel entry deleted successfully'
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Settlements API
